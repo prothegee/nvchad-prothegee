@@ -1,0 +1,43 @@
+##
+## directory
+##
+/.bin
+/.out
+/.log
+/.logs
+/.cache
+/.nvim
+
+.svelte-kit
+
+build
+target
+node_modules
+
+v:null
+
+##
+## extension
+##
+*.bak*
+*Zone.Identifier
+
+##
+## file: include
+##
+/.configs/config.*.json
+/.vscode/launch.json
+/.vscode/settings.json
+/.vscode/tasks.json
+/CMakePresets.json
+/vendors/**/*.zip
+/lazy-lock.json
+
+.tmp*
+
+compile_commands.json
+
+##
+## file: exclude
+##
+!/.configs/config.*.json.debug
