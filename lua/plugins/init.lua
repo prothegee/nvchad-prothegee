@@ -1,5 +1,3 @@
-require "modules.command-center"
-
 return {
     {
         "stevarc/conform.nvim",
