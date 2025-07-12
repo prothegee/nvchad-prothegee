@@ -9,6 +9,7 @@ local _telescope = {
     actions = require("telescope.actions"),
     action_state = require("telescope.actions.state")
 }
+local _tformat = require "modules.functions.tformat"
 --#endregion
 
 --#region vars
@@ -118,14 +119,7 @@ function this.set_nvim_cmake_data(preset, preset_name)
         preset = preset,
         preset_name = preset_name
     }
-    local data_json = vim.json.encode(data_write)
-
-    if not data_json then
-        vim.notify("ERROR: fail to parse data", vim.log.levels.ERROR)
-        return false
-    end
-
-    local formatted_json = vim.fn.system('python3 -c "import json, sys; print(json.dumps(json.load(sys.stdin), indent=4)"', data_json)
+    local data_json = _tformat.json_format_with_indent(data_write, 4)
 
     local file, file_error = io.open(cache, "w")
 
@@ -134,7 +128,7 @@ function this.set_nvim_cmake_data(preset, preset_name)
         return false
     end
 
-    local write, write_error = file:write(formatted_json)
+    local write, write_error = file:write(data_json)
 
     if not write then
         vim.notify("ERROR: fail to write file: " .. (write_error or "unknown error"), vim.log.levels.ERROR)
@@ -263,7 +257,6 @@ function this.preset_select()
         return
     end
 
-    -- TODO: show another ui to chose from presets
     _telescope.picker.new({
         prompt_title = "Select CMake Preset",
         finder = _telescope.finder.new_table({
