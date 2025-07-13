@@ -2,6 +2,9 @@ local this = {}
 
 local _actions = require("telescope.actions")
 local _action_state = require("telescope.actions.state")
+local _pickers = require("telescope.pickers")
+local _finders = require("telescope.finders")
+local _configs = require("telescope.config")
 
 local _nvim = require "modules.functions.nvim"
 local _cmake = require "modules.partials.cmake"
@@ -14,9 +17,9 @@ this.default = {
         insert = "i",
         normal = "n"
     },
-    lhs = "<C-S-p>",
+    lhs = "<C-A-p>",
     command = "NVimCommandCenter",
-    description = "NVim Command Center Interface ( ctrl+shift+pp )"
+    description = "NVim Command Center Interface ( ctrl + alt + p )"
 }
 
 -- commands collection
@@ -51,17 +54,23 @@ this.prompt_title = "NVim Command Center"
 function this.show_ui()
     _nvim.initialize()
 
-    require('telescope.pickers').new({
-        prompt_title = this.promp_title,
-        finder = require('telescope.finders').new_table({
-            results = vim.tbl_keys(this.commands),
+    -- get and sort command keys alphabetically
+    local command_keys = vim.tbl_keys(this.commands)
+    table.sort(command_keys, function(a, b)
+        return a:lower() < b:lower()  -- case-insensitive sorting
+    end)
+
+    _pickers.new({
+        prompt_title = this.prompt_title,
+        finder = _finders.new_table({
+            results = command_keys,
         }),
-        sorter = require('telescope.config').values.generic_sorter({}),
+        sorter = _configs.values.generic_sorter({}),
         attach_mappings = function(prompt_bufnr, map)
             _actions.select_default:replace(function()
                 _actions.close(prompt_bufnr)
                 local selection = _action_state.get_selected_entry()
-                local cmd = this.commands[selection[1]]
+                local cmd = this.commands[selection.value]
 
                 -- check cmd type
                 if type(cmd) == "function" then
@@ -97,7 +106,13 @@ function this.register_default_keymap()
         return
     end
 
-    vim.keymap.set(this.default.mode.all, this.default.lhs, ":" .. this.default.command .. "<CR>", {
+    vim.keymap.set(this.default.mode.all, this.default.lhs, function()
+        if vim.api.nvim_get_mode().mode == "i" then
+            vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+        end
+
+        this.show_ui()
+    end, {
         desc = this.default.description,
         silent = true
     })
