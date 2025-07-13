@@ -36,8 +36,5 @@ vim.schedule(function()
     require "mappings"
 end)
 
-local _command_center = require "modules.command-center"
-
-_command_center.register_default_keymap()
-_command_center.register_default_command()
+require "modules"
 

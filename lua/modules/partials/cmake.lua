@@ -1,7 +1,7 @@
 local M = {}
 
 --#region local
-local _nvim = require "modules.functions.nvim"
+local _nvim = require "modules.partials.nvim"
 local _telescope = {
     picker = require("telescope.pickers"),
     finder = require("telescope.finders"),
@@ -9,10 +9,11 @@ local _telescope = {
     actions = require("telescope.actions"),
     action_state = require("telescope.actions.state")
 }
-local _tformat = require "modules.functions.tformat"
+local _tformat = require "modules.partials.tformat"
 --#endregion
 
 --#region vars
+-- template collections
 M.template = {
     nvim_cmake_content = [[
     {
@@ -22,6 +23,7 @@ M.template = {
     ]],
 }
 
+-- file collections
 M.file = {
     cmake_lists_txt = "CMakeLists.txt",
     cmake_presets_json = "CMakePresets.json",
@@ -31,10 +33,10 @@ M.file = {
 --#endregion
 
 --#region tooling
---- # create nvim cmake
---- ---
---- # note
---- * will create `.nvim/nvim-cmake.json` at current dir
+-- # create nvim cmake
+-- ---
+-- # note
+-- * will create `.nvim/nvim-cmake.json` at current dir
 function M.create_nvim_cmake()
     local destination = vim.fn.getcwd() .. "/" .. M.file.nvim_cmake_content_path
 
@@ -61,13 +63,13 @@ function M.create_nvim_cmake()
     end
 end
 
---- # get nvim cmake data
---- ---
---- # note
---- * get existing data from `.nvim/nvim-cmake.json` at current dir
---- ---
---- # return
---- object = { preset, preset_name }
+-- # get nvim cmake data
+-- ---
+-- # note
+-- * get existing data from `.nvim/nvim-cmake.json` at current dir
+-- ---
+-- # return
+-- object = { preset, preset_name }
 function M.get_nvim_cmake_data()
     local result = {
         preset = 0,
@@ -116,6 +118,14 @@ function M.get_nvim_cmake_data()
     }
 end
 
+-- # set nvim cmake data
+-- ---
+-- # params
+-- * preset - number
+-- * preseet_name - string
+-- ---
+-- # return
+-- boolean
 function M.set_nvim_cmake_data(preset, preset_name)
     local cache = vim.fn.getcwd() .. "/" .. M.file.nvim_cmake_content_path
 
@@ -155,6 +165,11 @@ function M.set_nvim_cmake_data(preset, preset_name)
     return true
 end
 
+-- # get cmake preset data
+-- ---
+-- # note
+-- * this function related with CMakePresets.json & .nvim/nvim-cmake.json
+-- * return value will be based on configurePresets index
 function M.get_cmake_preset_data()
     local file = io.open(vim.fn.getcwd() .. "/" .. M.file.cmake_presets_json)
 
@@ -222,6 +237,11 @@ end
 
 --#region core
 M.preset_init_hint = "CMake: Preset Init"
+-- # cmake preset init
+-- ---
+-- # note
+-- * will create CMakePresets.json if doesn't exists
+-- * has corelation with .nvim/nvim-cmake.json
 function M.preset_init()
     vim.notify(M.preset_init_hint)
 
@@ -283,6 +303,13 @@ function M.preset_init()
 end
 
 M.preset_select_hint = "CMake: Preset Select"
+-- # cmake preset select
+-- ---
+-- # note
+-- * will sellect preset from CMakePresets.json
+-- * has corelation with .nvim/nvim-cmake.json
+-- * selected preset will be save to .nvim/nvim-cmake.json
+
 function M.preset_select()
     local file_path = vim.fn.getcwd() .. "/" .. M.file.cmake_presets_json
 
@@ -368,10 +395,15 @@ end
 
 M.project_clean_hint = "CMake: Project Clean"
 function M.project_clean()
-    vim.notify(M.project_clean_hint)
+    vim.notify("TODO: " .. M.project_clean_hint)
 end
 
 M.project_configure_hint = "CMake: Project Configure"
+-- # cmake project configure
+-- ---
+-- # note
+-- * will configure from selected preset
+-- * has corelation with CMakePresets.json & .nvim/nvim-cmakae.json
 function M.project_configure()
     local preset = M.get_cmake_preset_data()
 
@@ -388,11 +420,13 @@ function M.project_configure()
         end
     end
 
+    local binary_dir = preset.binaryDir:gsub("${sourceDir}", vim.fn.getcwd())
+
     local cmake_cmd = string.format(
         "cmake -G\"%s\" -S\"%s\" -B\"%s\" %s",
         preset.generator,
         vim.fn.getcwd(),
-        preset.binaryDir:gsub("${sourceDir}", vim.fn.getcwd()),
+        binary_dir,
         table.concat(cache_vars, " ")
     )
 
@@ -400,13 +434,81 @@ function M.project_configure()
 end
 
 M.project_configure_clean_hint = "CMake: Project Configure Clean"
+-- # cmake project configure
+-- ---
+-- # note
+-- * same as project_configure, but will clean/remove build dir first
+-- * will configure from selected preset
+-- * has corelation with CMakePresets.json & .nvim/nvim-cmakae.json
 function M.project_configure_clean()
-    vim.notify(M.project_configure_clean_hint)
+    local preset = M.get_cmake_preset_data()
+
+    if preset == nil then
+        vim.notify("ERROR: preset error", vim.log.levels.ERROR)
+        return
+    end
+
+    local cache_vars = {}
+
+    if preset.cacheVariables then
+        for key, val in pairs(preset.cacheVariables) do
+            table.insert(cache_vars, string.format("-D%s=%s", key, tostring(val)))
+        end
+    end
+
+    local binary_dir = preset.binaryDir:gsub("${sourceDir}", vim.fn.getcwd())
+
+    local cmake_cmd = string.format(
+        "rm -rf %s && cmake -G\"%s\" -S\"%s\" -B\"%s\" %s",
+        binary_dir,
+        preset.generator,
+        vim.fn.getcwd(),
+        binary_dir,
+        table.concat(cache_vars, " ")
+    )
+
+    _nvim.create_floating_terminal(cmake_cmd, "CMake: Configure - " .. preset.displayName)
 end
 
 M.project_build_hint = "CMake: Project Build"
+-- # cmake project build
+-- ---
+-- # note
+-- * will build from selected preset
+-- * has corelation with CMakePresets.json & .nvim/nvim-cmakae.json
 function M.project_build()
-    vim.notify(M.project_build_hint)
+    local preset = M.get_cmake_preset_data()
+
+    if preset == nil then
+        vim.notify("ERROR: preset error", vim.log.levels.ERROR)
+        return
+    end
+
+    local cache_vars = {}
+
+    if preset.cacheVariables then
+        for key, val in pairs(preset.cacheVariables) do
+            table.insert(cache_vars, string.format("-D%s=%s", key, tostring(val)))
+        end
+    end
+
+    local binary_dir = preset.binaryDir:gsub("${sourceDir}", vim.fn.getcwd())
+
+    local unix_ln = function()
+        if not _nvim.os.windows then
+            return string.format("ln -s %s/%s;", binary_dir, M.file.cmake_compile_commands_json)
+        else
+            return ""
+        end
+    end
+
+    local cmake_cmd = string.format(
+        "%scmake --build \"%s\"",
+        unix_ln(),
+        binary_dir
+    )
+
+    _nvim.create_floating_terminal(cmake_cmd, "CMake: Build - " .. preset.displayName)
 end
 --#endregion
 

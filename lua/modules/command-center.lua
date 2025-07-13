@@ -1,4 +1,4 @@
-local this = {}
+local M = {}
 
 local _actions = require("telescope.actions")
 local _action_state = require("telescope.actions.state")
@@ -6,12 +6,12 @@ local _pickers = require("telescope.pickers")
 local _finders = require("telescope.finders")
 local _configs = require("telescope.config")
 
-local _nvim = require "modules.functions.nvim"
+local _nvim = require "modules.partials.nvim"
 local _cmake = require "modules.partials.cmake"
 
 --#region global
--- command center default collections
-this.default = {
+-- command-center default collections
+M.default = {
     mode = {
         all = { "i", "n" },
         insert = "i",
@@ -22,8 +22,15 @@ this.default = {
     description = "NVim Command Center Interface ( ctrl + alt + p )"
 }
 
--- commands collection
-this.commands = {
+M.prompt_title = "NVim Command Center"
+
+-- command-center dirs collections
+M.dirs = {
+    nvim_command_center = ".nvim/command-center"
+}
+
+-- command-center commands collections
+M.commands = {
     --#region cmake
     [_cmake.preset_init_hint] = function()
         _cmake.preset_init()
@@ -44,24 +51,37 @@ this.commands = {
 
     [_cmake.project_build_hint] = function()
         _cmake.project_build()
-    end
+    end,
+    --#endregion
+
+    --#region search and replace
+    --#endregion
+
+    --#regiont tformat
     --#endregion
 }
 
-this.prompt_title = "NVim Command Center"
+-- initialize command-center
+function M.initialize()
+    local dir_current = vim.fn.getcwd()
+    local dir_to_create = dir_current .. "/" .. M.dirs.nvim_command_center
 
--- show this ui
-function this.show_ui()
-    _nvim.initialize()
+    if vim.fn.isdirectory(dir_to_create) == 0 then
+        vim.notify("INFO: creating \"" .. dir_to_create .. "\"", vim.log.levels.INFO)
+        vim.fn.mkdir(dir_to_create, "p")
+    end
+end
 
+-- show command-center ui
+function M.show_ui()
     -- get and sort command keys alphabetically
-    local command_keys = vim.tbl_keys(this.commands)
+    local command_keys = vim.tbl_keys(M.commands)
     table.sort(command_keys, function(a, b)
         return a:lower() < b:lower()  -- case-insensitive sorting
     end)
 
     _pickers.new({
-        prompt_title = this.prompt_title,
+        prompt_title = M.prompt_title,
         finder = _finders.new_table({
             results = command_keys,
         }),
@@ -70,7 +90,7 @@ function this.show_ui()
             _actions.select_default:replace(function()
                 _actions.close(prompt_bufnr)
                 local selection = _action_state.get_selected_entry()
-                local cmd = this.commands[selection.value]
+                local cmd = M.commands[selection.value]
 
                 -- check cmd type
                 if type(cmd) == "function" then
@@ -85,44 +105,44 @@ function this.show_ui()
 end
 
 -- register default command
-function this.register_default_command()
-    vim.api.nvim_create_user_command(this.default.command, this.show_ui, {})
+function M.register_default_command()
+    vim.api.nvim_create_user_command(M.default.command, M.show_ui, {})
 end
 -- register remove default command
-function this.register_remove_default_command()
-    vim.api.nvim_del_user_command(this.default.command)
-    vim.notify("INFO: removing `" .. this.default.command .. "` command", vim.log.levels.INFO)
+function M.register_remove_default_command()
+    vim.api.nvim_del_user_command(M.default.command)
+    vim.notify("INFO: removing `" .. M.default.command .. "` command", vim.log.levels.INFO)
 end
 
 -- register default keymap
-function this.register_default_keymap()
-    if _nvim.keymap_is_exists(this.default.mode.insert, this.default.lhs) then
-        vim.notify("ERROR: `" .. this.default.mode.insert .. "` `" .. this.default.lhs .. "` already exists", vim.log.levels.ERROR)
+function M.register_default_keymap()
+    if _nvim.keymap_is_exists(M.default.mode.insert, M.default.lhs) then
+        vim.notify("ERROR: `" .. M.default.mode.insert .. "` `" .. M.default.lhs .. "` already exists", vim.log.levels.ERROR)
         return
     end
 
-    if _nvim.keymap_is_exists(this.default.mode.normal, this.default.lhs) then
-        vim.notify("ERROR: `" .. this.default.mode.normal .. "` `" .. this.default.lhs .. "` already exists", vim.log.levels.ERROR)
+    if _nvim.keymap_is_exists(M.default.mode.normal, M.default.lhs) then
+        vim.notify("ERROR: `" .. M.default.mode.normal .. "` `" .. M.default.lhs .. "` already exists", vim.log.levels.ERROR)
         return
     end
 
-    vim.keymap.set(this.default.mode.all, this.default.lhs, function()
+    vim.keymap.set(M.default.mode.all, M.default.lhs, function()
         if vim.api.nvim_get_mode().mode == "i" then
             vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
         end
 
-        this.show_ui()
+        M.show_ui()
     end, {
-        desc = this.default.description,
+        desc = M.default.description,
         silent = true
     })
 end
 -- register remove default keymap
-function this.register_remove_default_keymap()
-    _nvim.del_keymap_safe(this.default.mode.insert, this.default.lhs)
-    _nvim.del_keymap_safe(this.default.mode.normal, this.default.lhs)
+function M.register_remove_default_keymap()
+    _nvim.del_keymap_safe(M.default.mode.insert, M.default.lhs)
+    _nvim.del_keymap_safe(M.default.mode.normal, M.default.lhs)
 end
 --#endregion
 
-return this
+return M
 
