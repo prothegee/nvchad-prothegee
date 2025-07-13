@@ -4,13 +4,9 @@ M.os = {
     windows = vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1
 }
 
-M.dirs = {
-    nvim_command_center = ".nvim/command-center"
-}
-
 function M.initialize()
     local dir_current = vim.fn.getcwd()
-    local dir_to_create = dir_current .. "/" .. M.dirs.nvim_command_center
+    local dir_to_create = dir_current .. "/.nvim"
 
     if vim.fn.isdirectory(dir_to_create) == 0 then
         vim.notify("INFO: creating \"" .. dir_to_create .. "\"", vim.log.levels.INFO)
