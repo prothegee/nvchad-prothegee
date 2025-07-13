@@ -1,6 +1,6 @@
-local THIS = {}
+local M = {}
 
-function THIS.json_format_with_indent(data, indent_space)
+function M.json_format_with_indent(data, indent_space)
     indent_space = indent_space or 4
 
     local indent = string.rep(" ", indent_space)
@@ -45,5 +45,5 @@ function THIS.json_format_with_indent(data, indent_space)
     return result
 end
 
-return THIS
+return M
 

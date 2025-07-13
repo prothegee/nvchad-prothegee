@@ -1,4 +1,4 @@
-local this = {}
+local M = {}
 
 --#region local
 local _nvim = require "modules.functions.nvim"
@@ -13,14 +13,20 @@ local _tformat = require "modules.functions.tformat"
 --#endregion
 
 --#region vars
-this.template = {
+M.template = {
     nvim_cmake_content = [[
     {
         "preset": 0,
         "preset_name": "debug"
     }
     ]],
-    nvim_cmake_content_path = ".nvim/nvim-cmake.json"
+}
+
+M.file = {
+    cmake_lists_txt = "CMakeLists.txt",
+    cmake_presets_json = "CMakePresets.json",
+    cmake_compile_commands_json = "compile_commands.json",
+    nvim_cmake_content_path = ".nvim/nvim-cmake.json",
 }
 --#endregion
 
@@ -29,8 +35,8 @@ this.template = {
 --- ---
 --- # note
 --- * will create `.nvim/nvim-cmake.json` at current dir
-function this.create_nvim_cmake()
-    local destination = vim.fn.getcwd() .. "/" .. this.template.nvim_cmake_content_path
+function M.create_nvim_cmake()
+    local destination = vim.fn.getcwd() .. "/" .. M.file.nvim_cmake_content_path
 
     if vim.loop.fs_stat(destination) then
         vim.notify("INFO: \"" .. destination .. "\" already exists", vim.log.levels.INFO)
@@ -44,7 +50,7 @@ function this.create_nvim_cmake()
         return
     end
 
-    if not file:write(this.template.nvim_cmake_content) then
+    if not file:write(M.template.nvim_cmake_content) then
         vim.notify("ERROR: failed to write nvim-cmake.json", vim.log.levels.ERROR)
         return
     end
@@ -62,17 +68,17 @@ end
 --- ---
 --- # return
 --- object = { preset, preset_name }
-function this.get_nvim_cmake_data()
+function M.get_nvim_cmake_data()
     local result = {
         preset = 0,
         preset_name = "debug"
     }
 
-    local nvim_cmake_file = vim.fn.getcwd() .. "/" .. this.template.nvim_cmake_content_path
+    local nvim_cmake_file = vim.fn.getcwd() .. "/" .. M.file.nvim_cmake_content_path
 
     if vim.loop.fs_stat(nvim_cmake_file) then
-        this.create_nvim_cmake()
-        nvim_cmake_file = vim.fn.getcwd() .. "/" .. this.template.nvim_cmake_content_path
+        M.create_nvim_cmake()
+        nvim_cmake_file = vim.fn.getcwd() .. "/" .. M.file.nvim_cmake_content_path
     end
 
     local file, open_err = io.open(nvim_cmake_file, "r")
@@ -104,11 +110,14 @@ function this.get_nvim_cmake_data()
     result.preset = data.preset or result.preset
     result.preset_name = data.preset_name or result.preset_name
 
-    return result
+    return {
+        preset = result.preset,
+        preset_name = result.preset_name
+    }
 end
 
-function this.set_nvim_cmake_data(preset, preset_name)
-    local cache = vim.fn.getcwd() .. "/" .. this.template.nvim_cmake_content_path
+function M.set_nvim_cmake_data(preset, preset_name)
+    local cache = vim.fn.getcwd() .. "/" .. M.file.nvim_cmake_content_path
 
     if not cache then
         vim.notify("ERROR: " .. cache .. " doesn't exists", vim.log.levels.ERROR)
@@ -145,14 +154,78 @@ function this.set_nvim_cmake_data(preset, preset_name)
 
     return true
 end
+
+function M.get_cmake_preset_data()
+    local file = io.open(vim.fn.getcwd() .. "/" .. M.file.cmake_presets_json)
+
+    if not file then
+        vim.notify("ERROR: can't find " .. M.file.cmake_presets_json, vim.log.levels.ERROR)
+        return nil
+    end
+
+    local content = file:read("*a")
+    file:close()
+
+    content = content:gsub("//.-[\r\n]", "")
+
+    local ok, presets = pcall(vim.json.decode, content)
+
+    if not ok then
+        vim.notify("ERROR: fail to decode contnet as preset", vim.log.levels.ERROR)
+        return nil
+    end
+
+    if not presets.configurePresets or type(presets.configurePresets) ~= "table" then
+        vim.notify("ERROR: configurePresets key not found", vim.log.levels.ERROR)
+        return nil
+    end
+
+    local nvim_cmake = M.get_nvim_cmake_data()
+
+    if not nvim_cmake or not nvim_cmake.preset then
+        vim.notify("ERROR: \"preset\" key not found", vim.log.levels.ERROR)
+        return nil
+    end
+
+    local preset = nvim_cmake.preset + 1
+
+    if preset < 1 or preset > #presets.configurePresets then
+        vim.notify("ERROR: wrong preset index, (" .. preset .. ") out of range", vim.log.levels.ERROR)
+        return nil
+    end
+
+    local data = presets.configurePresets[preset]
+
+    if not data or type(data) ~= "table" then
+        vim.notify("ERROR: wrong preset data from preset index", vim.log.levels.ERROR)
+        return nil
+    end
+
+    if not data.name then
+        vim.notify("ERROR: preset missing \"name\" key", vim.log.levels.ERROR)
+        return nil
+    end
+
+    if not data.binaryDir then
+        vim.notify("ERROR: preset missing \"binaryDir\" key", vim.log.levels.ERROR)
+        return nil
+    end
+
+    if nvim_cmake.preset_name and data.name ~= nvim_cmake.preset_name then
+        vim.notify(string.format("ERROR: preset name not match, cache=%s, preset=%s", nvim_cmake.preset_name, data.name), vim.log.levels.ERROR)
+        return nil
+    end
+
+    return data
+end
 --#endregion
 
 --#region core
-this.preset_init_hint = "CMake: Preset Init"
-function this.preset_init()
-    vim.notify(this.preset_init_hint)
+M.preset_init_hint = "CMake: Preset Init"
+function M.preset_init()
+    vim.notify(M.preset_init_hint)
 
-    this.create_nvim_cmake()
+    M.create_nvim_cmake()
 
     local source
     if _nvim.os.windows then
@@ -209,9 +282,9 @@ function this.preset_init()
     end
 end
 
-this.preset_select_hint = "CMake: Preset Select"
-function this.preset_select()
-    local file_path = vim.fn.getcwd() .. "/CMakePresets.json"
+M.preset_select_hint = "CMake: Preset Select"
+function M.preset_select()
+    local file_path = vim.fn.getcwd() .. "/" .. M.file.cmake_presets_json
 
     if not file_path then
         vim.notify("ERROR: can't find CMakePresets.json in " .. vim.fn.getcwd())
@@ -280,7 +353,7 @@ function this.preset_select()
                 if selection and selection.value then
                     local preset = selection.value
 
-                    this.set_nvim_cmake_data(preset.idx, preset.name)
+                    M.set_nvim_cmake_data(preset.idx, preset.name)
 
                     vim.notify("INFO: selected preset: " .. preset.display_name, vim.log.levels.INFO)
                 else
@@ -293,26 +366,49 @@ function this.preset_select()
     }):find()
 end
 
-this.project_clean_hint = "CMake: Project Clean"
-function this.project_clean()
-    vim.notify(this.project_clean_hint)
+M.project_clean_hint = "CMake: Project Clean"
+function M.project_clean()
+    vim.notify(M.project_clean_hint)
 end
 
-this.project_configure_hint = "CMake: Project Configure"
-function this.project_configure()
-    vim.notify(this.project_configure_hint)
+M.project_configure_hint = "CMake: Project Configure"
+function M.project_configure()
+    local preset = M.get_cmake_preset_data()
+
+    if preset == nil then
+        vim.notify("ERROR: preset error", vim.log.levels.ERROR)
+        return
+    end
+
+    local cache_vars = {}
+
+    if preset.cacheVariables then
+        for key, val in pairs(preset.cacheVariables) do
+            table.insert(cache_vars, string.format("-D%s=%s", key, tostring(val)))
+        end
+    end
+
+    local cmake_cmd = string.format(
+        "cmake -G\"%s\" -S\"%s\" -B\"%s\" %s",
+        preset.generator,
+        vim.fn.getcwd(),
+        preset.binaryDir:gsub("${sourceDir}", vim.fn.getcwd()),
+        table.concat(cache_vars, " ")
+    )
+
+    _nvim.create_floating_terminal(cmake_cmd, "CMake: Configure - " .. preset.displayName)
 end
 
-this.project_configure_clean_hint = "CMake: Project Configure Clean"
-function this.project_configure_clean()
-    vim.notify(this.project_configure_clean_hint)
+M.project_configure_clean_hint = "CMake: Project Configure Clean"
+function M.project_configure_clean()
+    vim.notify(M.project_configure_clean_hint)
 end
 
-this.project_build_hint = "CMake: Project Build"
-function this.project_build()
-    vim.notify(this.project_build_hint)
+M.project_build_hint = "CMake: Project Build"
+function M.project_build()
+    vim.notify(M.project_build_hint)
 end
 --#endregion
 
-return this
+return M
 
