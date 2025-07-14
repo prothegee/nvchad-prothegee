@@ -67,6 +67,8 @@ function M.create_floating_terminal(command, title)
 
     vim.cmd("startinsert")
 
+    vim.notify("INFO: press ESC to exit", vim.log.levels.INFO)
+
     return window
 end
 

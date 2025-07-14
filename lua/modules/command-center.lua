@@ -45,8 +45,11 @@ M.commands = {
     [_cmake.project_configure_hint] = function()
         _cmake.project_configure()
     end,
-    [_cmake.project_configure_clean_hint] = function()
+    [_cmake.project_cofigure_clean_hint] = function()
         _cmake.project_configure_clean()
+    end,
+    [_cmake.project_configure_clean_remove_hint] = function()
+        _cmake.project_configure_clean_remove()
     end,
 
     [_cmake.project_build_hint] = function()

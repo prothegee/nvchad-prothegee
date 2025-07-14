@@ -14,7 +14,7 @@ M.base46 = {
         ["@comment"] = { italic = true },
     },
 
-    -- transparency = true,
+    transparency = true,
 }
 
 M.nvdash = { load_on_startup = true }
