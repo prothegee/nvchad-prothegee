@@ -403,7 +403,7 @@ M.project_configure_hint = "CMake: Project Configure"
 -- ---
 -- # note
 -- * will configure from selected preset
--- * has corelation with CMakePresets.json & .nvim/nvim-cmakae.json
+-- * has corelation with CMakePresets.json & .nvim/nvim-cmake.json
 function M.project_configure()
     local preset = M.get_cmake_preset_data()
 
@@ -430,17 +430,54 @@ function M.project_configure()
         table.concat(cache_vars, " ")
     )
 
-    _nvim.create_floating_terminal(cmake_cmd, "CMake: Configure - " .. preset.displayName)
+    _nvim.create_floating_terminal(cmake_cmd, (M.project_configure_hint .. " - " .. preset.displayName))
 end
 
-M.project_configure_clean_hint = "CMake: Project Configure Clean"
--- # cmake project configure
+M.project_cofigure_clean_hint = "CMake: Project Configure Clean"
+-- # cmake project configure clean
 -- ---
 -- # note
--- * same as project_configure, but will clean/remove build dir first
+-- * same as project_configure, but will clean target build dir first
 -- * will configure from selected preset
--- * has corelation with CMakePresets.json & .nvim/nvim-cmakae.json
+-- * has corelation with CMakePresets.json & .nvim/nvim-cmake.json
 function M.project_configure_clean()
+    local preset = M.get_cmake_preset_data()
+
+    if preset == nil then
+        vim.notify("ERROR: preset error", vim.log.levels.ERROR)
+        return
+    end
+
+    local cache_vars = {}
+
+    if preset.cacheVariables then
+        for key, val in pairs(preset.cacheVariables) do
+            table.insert(cache_vars, string.format("-D%s=%s", key, tostring(val)))
+        end
+    end
+
+    local binary_dir = preset.binaryDir:gsub("${sourceDir}", vim.fn.getcwd())
+
+    local cmake_cmd = string.format(
+        "cmake --build %s --target clean && cmake -G\"%s\" -S\"%s\" -B\"%s\" %s",
+        binary_dir,
+        preset.generator,
+        vim.fn.getcwd(),
+        binary_dir,
+        table.concat(cache_vars, " ")
+    )
+
+    _nvim.create_floating_terminal(cmake_cmd, (M. project_configure_clean_hint .. " - " .. preset.displayName))
+end
+
+M.project_configure_clean_remove_hint = "CMake: Project Configure Clean Remove"
+-- # cmake project configure clean remove
+-- ---
+-- # note
+-- * same as project_configure, but will remove (not --taget clean) build dir first
+-- * will configure from selected preset
+-- * has corelation with CMakePresets.json & .nvim/nvim-cmake.json
+function M.project_configure_clean_remove()
     local preset = M.get_cmake_preset_data()
 
     if preset == nil then
@@ -467,15 +504,15 @@ function M.project_configure_clean()
         table.concat(cache_vars, " ")
     )
 
-    _nvim.create_floating_terminal(cmake_cmd, "CMake: Configure - " .. preset.displayName)
+    _nvim.create_floating_terminal(cmake_cmd, (M.project_configure_clean_remove_hint .. " - " .. preset.displayName))
 end
 
 M.project_build_hint = "CMake: Project Build"
 -- # cmake project build
 -- ---
 -- # note
--- * will build from selected preset
--- * has corelation with CMakePresets.json & .nvim/nvim-cmakae.json
+-- * will build from selected preset as default build
+-- * has corelation with CMakePresets.json & .nvim/nvim-cmake.json
 function M.project_build()
     local preset = M.get_cmake_preset_data()
 
@@ -494,21 +531,21 @@ function M.project_build()
 
     local binary_dir = preset.binaryDir:gsub("${sourceDir}", vim.fn.getcwd())
 
-    local unix_ln = function()
+    local symlink = function()
         if not _nvim.os.windows then
             return string.format("ln -s %s/%s;", binary_dir, M.file.cmake_compile_commands_json)
         else
-            return ""
+            return "" -- the hell happen with Windows & Mac?
         end
     end
 
     local cmake_cmd = string.format(
         "%scmake --build \"%s\"",
-        unix_ln(),
+        symlink(),
         binary_dir
     )
 
-    _nvim.create_floating_terminal(cmake_cmd, "CMake: Build - " .. preset.displayName)
+    _nvim.create_floating_terminal(cmake_cmd, (M.project_build_hint .. " - " .. preset.displayName))
 end
 --#endregion
 
