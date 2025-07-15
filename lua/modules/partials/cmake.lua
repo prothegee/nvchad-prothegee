@@ -1,6 +1,5 @@
 local M = {}
 
---#region local
 local _nvim = require "modules.partials.nvim"
 local _telescope = {
     picker = require("telescope.pickers"),
@@ -10,9 +9,10 @@ local _telescope = {
     action_state = require("telescope.actions.state")
 }
 local _tformat = require "modules.partials.tformat"
---#endregion
 
---#region vars
+-- this module actual name to be use
+M.name = "NVimCMake"
+
 -- template collections
 M.template = {
     nvim_cmake_content = [[
@@ -30,9 +30,7 @@ M.file = {
     cmake_compile_commands_json = "compile_commands.json",
     nvim_cmake_content_path = ".nvim/nvim-cmake.json",
 }
---#endregion
 
---#region tooling
 -- # create nvim cmake
 -- ---
 -- # note
@@ -233,9 +231,7 @@ function M.get_cmake_preset_data()
 
     return data
 end
---#endregion
 
---#region core
 M.preset_init_hint = "CMake: Preset Init"
 -- # cmake preset init
 -- ---
@@ -547,7 +543,6 @@ function M.project_build()
 
     _nvim.create_floating_terminal(cmake_cmd, (M.project_build_hint .. " - " .. preset.displayName))
 end
---#endregion
 
 return M
 

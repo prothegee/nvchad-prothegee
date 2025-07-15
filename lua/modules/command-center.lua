@@ -8,8 +8,8 @@ local _configs = require("telescope.config")
 
 local _nvim = require "modules.partials.nvim"
 local _cmake = require "modules.partials.cmake"
+local _session = require "modules.partials.session"
 
---#region global
 -- command-center default collections
 M.default = {
     mode = {
@@ -57,6 +57,21 @@ M.commands = {
     end,
     --#endregion
 
+    --#region session
+    [_session.autosave_setup_hint] = function()
+        _session.autosave_setup()
+    end,
+    [_session.autoload_setup_hint] = function()
+        _session.autoload_setup()
+    end,
+    [_session.save_hint] = function()
+        _session.save()
+    end,
+    [_session.load_hint] = function()
+        _session.load()
+    end,
+    --#endregion
+
     --#region search and replace
     --#endregion
 
@@ -70,7 +85,6 @@ function M.initialize()
     local dir_to_create = dir_current .. "/" .. M.dirs.nvim_command_center
 
     if vim.fn.isdirectory(dir_to_create) == 0 then
-        vim.notify("INFO: creating \"" .. dir_to_create .. "\"", vim.log.levels.INFO)
         vim.fn.mkdir(dir_to_create, "p")
     end
 end
