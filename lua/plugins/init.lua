@@ -1,6 +1,6 @@
 return {
     {
-        "stevarc/conform.nvim",
+        "stevearc/conform.nvim",
         -- event = "BufWritePre",
         opts = require "configs.conform"
     },
@@ -61,5 +61,14 @@ return {
     {
         import = "nvchad.blink.lazyspec"
     },
+
+    -- {
+    --     "blink.cmp",
+    --     opts = {
+    --         keymap = {
+    --             ["<Tab>"] = nil,
+    --         }
+    --     }
+    -- }
 }
 
